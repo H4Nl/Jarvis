@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jarvis</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #eef1ff;
+    font-family: -apple-system, 'Segoe UI', sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* ── KEY GİRİŞ EKRANI ── */
+  .kurulum-ekrani {
+    position: fixed;
+    inset: 0;
+    background: #eef1ff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 24px;
+    z-index: 100;
+  }
+
+  .kurulum-ekrani.gizle { display: none; }
+
+  .kurulum-logo {
+    font-size: 48px;
+    margin-bottom: 8px;
+  }
+
+  .kurulum-baslik {
+    font-size: 26px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: 6px;
+  }
+
+  .kurulum-aciklama {
+    font-size: 13px;
+    color: #888;
+    text-align: center;
+    margin-bottom: 32px;
+    line-height: 1.5;
+  }
+
+  .kurulum-grup {
+    width: 100%;
+    max-width: 360px;
+    margin-bottom: 14px;
+  }
+
+  .kurulum-etiket {
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+
+  .kurulum-input {
+    width: 100%;
+    padding: 13px 16px;
+    border: 2px solid #dde2ff;
+    border-radius: 14px;
+    font-size: 14px;
+    color: #333;
+    background: white;
+    outline: none;
+    font-family: monospace;
+    transition: border-color 0.2s;
+  }
+
+  .kurulum-input:focus {
+    border-color: #4c6ef5;
+  }
+
+  .kurulum-input::placeholder { color: #ccc; }
+
+  .kurulum-btn {
+    width: 100%;
+    max-width: 360px;
+    padding: 15px;
+    background: linear-gradient(135deg, #4c6ef5, #3451d1);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+    box-shadow: 0 4px 15px rgba(76,110,245,0.4);
+    transition: transform 0.2s;
+  }
+
+  .kurulum-btn:active { transform: scale(0.97); }
+
+  .kurulum-hata {
+    color: #e03131;
+    font-size: 13px;
+    margin-top: 10px;
+    text-align: center;
+    display: none;
+  }
+
+  .kurulum-hata.goster { display: block; }
+
+  .gizlilik-notu {
+    font-size: 11px;
+    color: #aaa;
+    text-align: center;
+    margin-top: 16px;
+    max-width: 320px;
+    line-height: 1.5;
+  }
+
+  /* ── ANA EKRAN ── */
+  .baslik {
+    text-align: center;
+    padding: 52px 20px 0;
+  }
+  .baslik-hey { font-size: 15px; font-weight: 400; color: #aaa; }
+  .baslik-ad  { font-size: 28px; font-weight: 700; color: #1a1a2e; letter-spacing: 1px; margin-top: 2px; }
+  .durum-yazi {
+    font-size: 13px; color: #999; margin-top: 8px; min-height: 20px; transition: color 0.3s;
+  }
+  .durum-yazi.dinliyor  { color: #4c6ef5; font-weight: 600; }
+  .durum-yazi.konusuyor { color: #2f9e44; font-weight: 600; }
+
+  /* Ayarlar butonu */
+  .ayar-btn {
+    position: fixed;
+    top: 18px; right: 18px;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(76,110,245,0.1);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 10;
+  }
+
+  /* BLOB */
+  .blob-alani {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    width: 100%;
+    cursor: pointer;
+  }
+
+  .blob-sarici {
+    position: relative;
+    width: 240px; height: 240px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .blob-golge {
+    position: absolute;
+    width: 160px; height: 40px;
+    background: radial-gradient(ellipse, rgba(60,80,255,0.2) 0%, transparent 70%);
+    bottom: 5px;
+    filter: blur(12px);
+    animation: golgeNefes 3s ease-in-out infinite;
+  }
+  @keyframes golgeNefes {
+    0%,100% { transform: scale(1);   opacity: 0.5; }
+    50%      { transform: scale(1.1); opacity: 0.8; }
+  }
+
+  .blob-svg {
+    width: 210px; height: 210px;
+    filter: drop-shadow(0 8px 25px rgba(60,80,255,0.35));
+    transition: filter 0.4s;
+  }
+  .blob-svg.dinliyor  { filter: drop-shadow(0 8px 35px rgba(60,80,255,0.65)); }
+  .blob-svg.konusuyor { filter: drop-shadow(0 8px 45px rgba(60,80,255,0.85)) drop-shadow(0 0 18px rgba(120,160,255,0.5)); }
+
+  /* ALT */
+  .alt-alan {
+    width: 100%; max-width: 480px;
+    padding: 0 20px 44px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+
+  .mesaj-alani {
+    min-height: 50px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .mesaj-metin {
+    font-size: 15px; color: #333; text-align: center; line-height: 1.55;
+    padding: 11px 18px; background: white; border-radius: 20px;
+    box-shadow: 0 2px 14px rgba(0,0,0,0.08); max-width: 360px;
+    display: none; animation: mesajGel 0.3s ease;
+  }
+  .mesaj-metin.goster { display: block; }
+  @keyframes mesajGel {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .yaziyor { display: none; align-items: center; justify-content: center; gap: 5px; padding: 8px; }
+  .yaziyor.goster { display: flex; }
+  .yaziyor span {
+    width: 8px; height: 8px; border-radius: 50%; background: #4c6ef5;
+    animation: zipla 1.1s ease-in-out infinite;
+  }
+  .yaziyor span:nth-child(2) { animation-delay: 0.18s; }
+  .yaziyor span:nth-child(3) { animation-delay: 0.36s; }
+  @keyframes zipla {
+    0%,100% { transform: translateY(0); opacity: 0.3; }
+    50%      { transform: translateY(-7px); opacity: 1; }
+  }
+
+  .giris-satiri {
+    display: flex; gap: 10px; align-items: center;
+    background: white; border-radius: 50px;
+    padding: 10px 10px 10px 20px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.1);
+  }
+  .giris-kutu {
+    flex: 1; border: none; outline: none;
+    font-size: 15px; color: #333; background: transparent; font-family: inherit;
+  }
+  .giris-kutu::placeholder { color: #bbb; }
+
+  .mik-btn {
+    width: 44px; height: 44px; border-radius: 50%; border: none;
+    background: linear-gradient(135deg, #4c6ef5, #3451d1);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; flex-shrink: 0;
+    box-shadow: 0 3px 12px rgba(76,110,245,0.4);
+  }
+  .mik-btn.aktif {
+    background: linear-gradient(135deg, #2f9e44, #1e7035);
+    box-shadow: 0 3px 15px rgba(47,158,68,0.55);
+    animation: mikPuls 0.75s ease-in-out infinite alternate;
+  }
+  @keyframes mikPuls {
+    from { transform: scale(1); }
+    to   { transform: scale(1.08); }
+  }
+
+  .gonder-btn {
+    width: 44px; height: 44px; border-radius: 50%; border: none;
+    background: linear-gradient(135deg, #4c6ef5, #3451d1);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 3px 12px rgba(76,110,245,0.4);
+    transition: transform 0.2s; flex-shrink: 0;
+  }
+  .gonder-btn:active { transform: scale(0.92); }
+</style>
+</head>
+<body>
+
+<!-- KEY GİRİŞ EKRANI -->
+<div class="kurulum-ekrani" id="kurulumEkrani">
+  <div class="kurulum-logo">🟡</div>
+  <div class="kurulum-baslik">Jarvis Kurulum</div>
+  <div class="kurulum-aciklama">
+    API key'lerini bir kez gir, telefonda kayıt edilir.<br>Bir daha sorulmaz.
+  </div>
+
+  <div class="kurulum-grup">
+    <div class="kurulum-etiket">Groq API Key</div>
+    <input class="kurulum-input" id="groqInput" type="password"
+      placeholder="gsk_..." autocomplete="off" spellcheck="false"/>
+  </div>
+
+  <div class="kurulum-grup">
+    <div class="kurulum-etiket">ElevenLabs API Key</div>
+    <input class="kurulum-input" id="elInput" type="password"
+      placeholder="sk_..." autocomplete="off" spellcheck="false"/>
+  </div>
+
+  <button class="kurulum-btn" id="kurulumBtn">Jarvis'i Başlat →</button>
+  <div class="kurulum-hata" id="kurulumHata">Lütfen her iki key'i de gir!</div>
+
+  <div class="gizlilik-notu">
+    🔒 Key'lerin sadece bu cihazda saklanır. Hiçbir sunucuya gönderilmez.
+  </div>
+</div>
+
+<!-- ANA EKRAN -->
+<button class="ayar-btn" id="ayarBtn" title="Key'leri değiştir">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+    stroke="#4c6ef5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+  </svg>
+</button>
+
+<div class="baslik">
+  <div class="baslik-hey">Hey</div>
+  <div class="baslik-ad">Jarvis 🟡</div>
+  <div class="durum-yazi" id="durumYazi">Dokunup konuşmaya başla</div>
+</div>
+
+<div class="blob-alani" id="blobAlani">
+  <div class="blob-sarici">
+    <div class="blob-golge"></div>
+    <svg class="blob-svg" id="blobSvg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="blobGrad" cx="38%" cy="32%" r="68%">
+          <stop offset="0%"   stop-color="#8ba4ff"/>
+          <stop offset="35%"  stop-color="#4c6ef5"/>
+          <stop offset="100%" stop-color="#1a2eb0"/>
+        </radialGradient>
+        <radialGradient id="parlak" cx="32%" cy="26%" r="28%">
+          <stop offset="0%"   stop-color="rgba(255,255,255,0.55)"/>
+          <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+        </radialGradient>
+      </defs>
+      <path id="blobYol"  fill="url(#blobGrad)"/>
+      <path id="blobYolP" fill="url(#parlak)" opacity="0.55"/>
+    </svg>
+  </div>
+</div>
+
+<div class="alt-alan">
+  <div class="mesaj-alani">
+    <div class="mesaj-metin" id="mesajMetin"></div>
+    <div class="yaziyor" id="yaziyorGos">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+  <div class="giris-satiri">
+    <input class="giris-kutu" id="girisSatiri" type="text"
+      placeholder="Bir şey sor..." autocomplete="off" spellcheck="false"/>
+    <button class="mik-btn" id="mikBtn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+        stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+        <line x1="12" y1="19" x2="12" y2="23"/>
+        <line x1="8"  y1="23" x2="16" y2="23"/>
+      </svg>
+    </button>
+    <button class="gonder-btn" id="gonderBtn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+        stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="22" y1="2" x2="11" y2="13"/>
+        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<script>
+// ── KEY YÖNETİMİ ──
+var GROQ_KEY       = '';
+var ELEVENLABS_KEY = '';
+var VOICE_ID       = '5IRSuKNUc0nJnSPPuxMI';
+var EL_MODEL       = 'eleven_turbo_v2_5';
+
+var SISTEM =
+  "Sen JARVIS'sin. Kullanicinin kisisel yapay zeka asistanisin. " +
+  "Cok dogal ve samimi konusursun, kesinlikle robot gibi degil. " +
+  "Cevaplarin kisa ve net. Bazen ufak espri yaparsın. Turkce konusursun. " +
+  "Hicbir zaman 'Bir yapay zeka olarak' veya 'Dil modeliyim' demezsin. " +
+  "Samimi bir arkadas gibi konusursun.";
+
+// LocalStorage'dan key'leri yükle
+function keyleriYukle() {
+  try {
+    var gk = localStorage.getItem('jarvis_groq');
+    var ek = localStorage.getItem('jarvis_el');
+    if (gk && ek && gk.length > 10 && ek.length > 10) {
+      GROQ_KEY       = gk;
+      ELEVENLABS_KEY = ek;
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+// Key'leri kaydet
+function keyleriKaydet(gk, ek) {
+  try {
+    localStorage.setItem('jarvis_groq', gk);
+    localStorage.setItem('jarvis_el',   ek);
+  } catch(e) {}
+}
+
+// Kurulum ekranı
+var kurulumEkrani = document.getElementById('kurulumEkrani');
+var groqInput     = document.getElementById('groqInput');
+var elInput       = document.getElementById('elInput');
+var kurulumBtn    = document.getElementById('kurulumBtn');
+var kurulumHata   = document.getElementById('kurulumHata');
+var ayarBtn       = document.getElementById('ayarBtn');
+
+kurulumBtn.addEventListener('click', function() {
+  var gk = groqInput.value.trim();
+  var ek = elInput.value.trim();
+  if (!gk || !ek || gk.length < 10 || ek.length < 10) {
+    kurulumHata.classList.add('goster');
+    return;
+  }
+  kurulumHata.classList.remove('goster');
+  GROQ_KEY       = gk;
+  ELEVENLABS_KEY = ek;
+  keyleriKaydet(gk, ek);
+  kurulumEkrani.classList.add('gizle');
+  jarvisBaslat();
+});
+
+ayarBtn.addEventListener('click', function() {
+  groqInput.value = '';
+  elInput.value   = '';
+  kurulumEkrani.classList.remove('gizle');
+});
+
+// Başlangıçta key varsa direkt aç
+if (keyleriYukle()) {
+  kurulumEkrani.classList.add('gizle');
+  setTimeout(jarvisBaslat, 300);
+}
+
+// ── BLOB ──
+var blobSvg  = document.getElementById('blobSvg');
+var blobYol  = document.getElementById('blobYol');
+var blobYolP = document.getElementById('blobYolP');
+var animDurum = 'bosta';
+var t = 0;
+
+function blobHesapla(t, boyut, boz) {
+  var n = 8, pts = [];
+  for (var i = 0; i < n; i++) {
+    var a = (i / n) * Math.PI * 2;
+    var r = boyut +
+      Math.sin(a * 2 + t * 0.9)  * boz * 0.42 +
+      Math.sin(a * 3 + t * 1.3)  * boz * 0.32 +
+      Math.sin(a * 5 + t * 0.55) * boz * 0.16;
+    pts.push({ x: 100 + r * Math.cos(a), y: 100 + r * Math.sin(a) });
+  }
+  return pts;
+}
+
+function ptsYol(pts) {
+  var n = pts.length;
+  var d = 'M ' + pts[0].x + ' ' + pts[0].y;
+  for (var i = 1; i <= n; i++) {
+    var prev  = pts[(i-1+n)%n], curr = pts[i%n];
+    var next  = pts[(i+1)%n],   prev2= pts[(i-2+n)%n];
+    var cp1x  = prev.x + (curr.x - prev2.x) * 0.2;
+    var cp1y  = prev.y + (curr.y - prev2.y) * 0.2;
+    var cp2x  = curr.x - (next.x  - prev.x) * 0.2;
+    var cp2y  = curr.y - (next.y  - prev.y) * 0.2;
+    d += ' C '+cp1x+' '+cp1y+' '+cp2x+' '+cp2y+' '+curr.x+' '+curr.y;
+  }
+  return d + ' Z';
+}
+
+function animasyonCiz() {
+  var boyut, boz, hiz;
+  if      (animDurum === 'konusuyor') { boyut = 74 + Math.sin(t*4.2)*9;  boz = 20 + Math.abs(Math.sin(t*3.8))*12; hiz = 0.06; }
+  else if (animDurum === 'dinliyor')  { boyut = 70 + Math.sin(t*2.5)*5;  boz = 11 + Math.sin(t*2.2)*5;             hiz = 0.042; }
+  else                                { boyut = 68 + Math.sin(t*1.1)*3;  boz = 7  + Math.sin(t*0.85)*2;            hiz = 0.022; }
+  t += hiz;
+  var pts  = blobHesapla(t, boyut, boz);
+  var pts2 = blobHesapla(t+0.4, boyut*0.52, boz*0.48);
+  blobYol.setAttribute('d', ptsYol(pts));
+  blobYolP.setAttribute('d', ptsYol(pts2));
+  blobYolP.setAttribute('transform', 'translate(-9,-13)');
+  requestAnimationFrame(animasyonCiz);
+}
+animasyonCiz();
+
+// ── DURUM ──
+var durumYazi = document.getElementById('durumYazi');
+function durumAyarla(d) {
+  animDurum = d === 'dinliyor' ? 'dinliyor' : d === 'konusuyor' ? 'konusuyor' : 'bosta';
+  blobSvg.className.baseVal = 'blob-svg' + (d==='dinliyor' ? ' dinliyor' : d==='konusuyor' ? ' konusuyor' : '');
+  durumYazi.className = 'durum-yazi' + (d==='dinliyor' ? ' dinliyor' : d==='konusuyor' ? ' konusuyor' : '');
+  durumYazi.textContent =
+    d==='dinliyor'  ? 'Dinliyorum...'           :
+    d==='dusunuyor' ? 'Düşünüyorum...'          :
+    d==='konusuyor' ? 'Konuşuyor...'            :
+                      'Dokunup konuşmaya başla';
+}
+
+// ── MESAJ ──
+var mesajMetin = document.getElementById('mesajMetin');
+var yaziyorGos = document.getElementById('yaziyorGos');
+function mesajGoster(metin, rol) {
+  yaziyorGos.classList.remove('goster');
+  mesajMetin.textContent = '';
+  mesajMetin.style.background = rol === 'kullanici' ? '#e8ecff' : 'white';
+  mesajMetin.style.color      = rol === 'kullanici' ? '#1e2fa0' : '#222';
+  mesajMetin.classList.remove('goster');
+  void mesajMetin.offsetWidth;
+  mesajMetin.classList.add('goster');
+  var i = 0;
+  var iv = setInterval(function() {
+    mesajMetin.textContent += metin.slice(i, i+3); i += 3;
+    if (i >= metin.length) clearInterval(iv);
+  }, 14);
+}
+
+// ── ELEVENLABS ──
+var mevcutSes = null;
+function elevenLabsSes(metin) {
+  if (mevcutSes) { mevcutSes.pause(); mevcutSes = null; }
+  durumAyarla('konusuyor');
+  fetch('https://api.elevenlabs.io/v1/text-to-speech/' + VOICE_ID + '/stream', {
+    method: 'POST',
+    headers: { 'xi-api-key': ELEVENLABS_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      text: metin, model_id: EL_MODEL,
+      voice_settings: { stability:0.40, similarity_boost:0.88, style:0.40, use_speaker_boost:true },
+      language_code: 'tr'
+    })
+  })
+  .then(function(r) { if (!r.ok) throw new Error('EL '+r.status); return r.blob(); })
+  .then(function(blob) {
+    var url = URL.createObjectURL(blob);
+    mevcutSes = new Audio(url);
+    mevcutSes.onended = function() { durumAyarla('idle'); URL.revokeObjectURL(url); };
+    mevcutSes.onerror = function() { durumAyarla('idle'); };
+    mevcutSes.play().catch(function() { durumAyarla('idle'); });
+  })
+  .catch(function(err) { console.warn('EL:', err.message); tarayiciSesi(metin); });
+}
+
+function tarayiciSesi(metin) {
+  if (!('speechSynthesis' in window)) { durumAyarla('idle'); return; }
+  window.speechSynthesis.cancel();
+  var u = new SpeechSynthesisUtterance(metin);
+  var sesler = window.speechSynthesis.getVoices();
+  u.voice = sesler.find(function(v){ return v.lang.startsWith('tr'); }) || null;
+  u.lang = 'tr-TR'; u.rate = 1.0;
+  u.onstart = function() { durumAyarla('konusuyor'); };
+  u.onend   = function() { durumAyarla('idle'); };
+  u.onerror = function() { durumAyarla('idle'); };
+  window.speechSynthesis.speak(u);
+}
+if ('speechSynthesis' in window) {
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.onvoiceschanged = function() { window.speechSynthesis.getVoices(); };
+}
+
+// ── GROQ ──
+var gecmis = [];
+function jarvisaGonder(mesaj) {
+  gecmis.push({ role:'user', content: mesaj });
+  durumAyarla('dusunuyor');
+  mesajMetin.classList.remove('goster');
+  yaziyorGos.classList.add('goster');
+
+  fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + GROQ_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role:'system', content: SISTEM }].concat(gecmis),
+      max_tokens: 500, temperature: 0.92
+    })
+  })
+  .then(function(r) {
+    if (!r.ok) return r.json().then(function(e){ throw new Error(e.error ? e.error.message : 'Groq hatası'); });
+    return r.json();
+  })
+  .then(function(data) {
+    var cevap = 'Anlayamadım, tekrar söyler misin?';
+    try { cevap = data.choices[0].message.content.trim(); } catch(e) {}
+    gecmis.push({ role:'assistant', content: cevap });
+    yaziyorGos.classList.remove('goster');
+    mesajGoster(cevap, 'jarvis');
+    elevenLabsSes(cevap);
+  })
+  .catch(function(err) {
+    yaziyorGos.classList.remove('goster');
+    durumAyarla('idle');
+    mesajGoster('⚠️ ' + err.message, 'jarvis');
+  });
+}
+
+// ── MİKROFON ──
+var dinliyor = false, tanima = null;
+var mikBtn = document.getElementById('mikBtn');
+var blobAlani = document.getElementById('blobAlani');
+
+var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (SR) {
+  tanima = new SR();
+  tanima.lang = 'tr-TR'; tanima.continuous = false; tanima.interimResults = false;
+  tanima.onstart  = function() { dinliyor = true;  mikBtn.classList.add('aktif');    durumAyarla('dinliyor'); };
+  tanima.onresult = function(e) { var t = e.results[0][0].transcript; mesajGoster(t,'kullanici'); jarvisaGonder(t); };
+  tanima.onerror  = function(e) { dinliyor = false; mikBtn.classList.remove('aktif'); durumAyarla('idle'); if(e.error==='not-allowed') mesajGoster('Mikrofon izni gerekli!','jarvis'); };
+  tanima.onend    = function() { dinliyor = false;  mikBtn.classList.remove('aktif'); if(durumYazi.textContent==='Dinliyorum...') durumAyarla('idle'); };
+}
+
+function mikrofon() {
+  if (!tanima) { mesajGoster('Mikrofon sadece Chrome\'da çalışır!','jarvis'); return; }
+  if (dinliyor) { tanima.stop(); }
+  else {
+    if (mevcutSes) { mevcutSes.pause(); mevcutSes = null; }
+    window.speechSynthesis && window.speechSynthesis.cancel();
+    try { tanima.start(); } catch(e) {}
+  }
+}
+mikBtn.addEventListener('click', mikrofon);
+blobAlani.addEventListener('click', mikrofon);
+
+// ── YAZI ──
+var girisSatiri = document.getElementById('girisSatiri');
+var gonderBtn   = document.getElementById('gonderBtn');
+function yaziylaGonder() {
+  var msg = girisSatiri.value.trim();
+  if (!msg) return;
+  girisSatiri.value = '';
+  mesajGoster(msg, 'kullanici');
+  if (mevcutSes) { mevcutSes.pause(); mevcutSes = null; }
+  window.speechSynthesis && window.speechSynthesis.cancel();
+  jarvisaGonder(msg);
+}
+gonderBtn.addEventListener('click', yaziylaGonder);
+girisSatiri.addEventListener('keydown', function(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();yaziylaGonder();} });
+
+// ── AÇILIŞ ──
+function jarvisBaslat() {
+  var saat = new Date().getHours();
+  var selam = saat<12 ? 'Günaydın! Ne yapıyoruz bugün?' : saat<18 ? 'Merhaba! Hazırım, ne istiyorsun?' : 'İyi akşamlar! Seni bekliyordum.';
+  gecmis = [];
+  gecmis.push({ role:'assistant', content: selam });
+  mesajGoster(selam, 'jarvis');
+  elevenLabsSes(selam);
+}
+</script>
+</body>
+</html>
